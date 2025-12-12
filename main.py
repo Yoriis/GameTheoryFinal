@@ -2,7 +2,7 @@ from games import GAMES, PLAYERS
 from Models.NormalForm import extensive_to_normal_form, get_mixed_probs
 from utilities.visualization import print_tree, print_normal_form
 from utilities.nash_equilibrium import pure_nash
-from utilities.dominance import get_strict_dominance, get_weak_dominance
+from utilities.dominance import get_strict_dominance, get_weak_dominance, rationalizability_2x2
 from utilities.best_responses import compute_best_responses
 import os
 from gui import run
@@ -38,14 +38,28 @@ def menu():
         best = compute_best_responses(result["strategies"], result["payoff_matrix"], PLAYERS)
         print("Best Responses:", best)
 
+        # Dominance
+        print("\n=== Dominance Analysis ===")
+        strict_dom = get_strict_dominance(result["strategies"], result["payoff_matrix"], PLAYERS)
+        print("Strictly Dominated Strategies:", strict_dom)
+        weak_dom = get_weak_dominance(result["strategies"], result["payoff_matrix"], PLAYERS)
+        print("Weakly Dominated Strategies:", weak_dom)
+
+        # rationalizability
+        print("\n=== Rationalizability (2x2) ===")
+        rat = rationalizability_2x2(result["strategies"], result["payoff_matrix"])
+        print("Rationalizable strategies:")
+        print_normal_form(rat["rationalizable_strategies"], rat["rationalizable_payoffs"], PLAYERS)
+
+
         # calculate payoff of mixed strtegies
         while True:
             print("==Analyze Mixed Strategies==")
-            get_mixed_probs(root, result)
-            choice = input("Analyze a different strategy or press Q to quit: ").strip()
+            choice = input("Analyze a new strategy or press Q to quit: ").strip()
             if choice.lower() == "q":
                 print("Exiting...")
                 break
+            get_mixed_probs(root, result)
         
 
 if __name__ == "__main__":

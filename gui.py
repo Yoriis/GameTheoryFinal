@@ -6,7 +6,7 @@ from games import GAMES, PLAYERS
 from Models.NormalForm import extensive_to_normal_form, get_mixed_probs, compute_expected_payoff
 from utilities.visualization import print_tree, print_normal_form
 from utilities.nash_equilibrium import pure_nash
-from utilities.dominance import get_strict_dominance, get_weak_dominance, mixed_strategy_dominance_3x3, mixed_strategy_dominance_3x2
+from utilities.dominance import get_strict_dominance, get_weak_dominance, mixed_strategy_dominance_3x3, mixed_strategy_dominance_3x2, rationalizability_2x2
 from utilities.best_responses import compute_best_responses
 
 st.markdown("""
@@ -292,26 +292,39 @@ if st.session_state.game_tree is not None:
                     st.write(f"Against {opp_action}: **{', '.join(responses)}**")
         
         with tab3:
-            st.subheader("Rationalizability")
-            st.info("Rationalizable strategies are those that survive iterated elimination of strictly dominated strategies.")
-            
-            # Show which strategies are rationalizable (not strictly dominated)
-            strict_dom = get_strict_dominance(strategies, payoff_matrix, PLAYERS)
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**Player 1 Rationalizable Strategies**")
-                p1_rational = [a for a in p1_actions if a not in strict_dom[PLAYERS[0]]]
-                for strat in p1_rational:
-                    st.success(f"✓ {strat}")
-            
-            with col2:
-                st.markdown("**Player 2 Rationalizable Strategies**")
-                p2_rational = [a for a in p2_actions if a not in strict_dom[PLAYERS[1]]]
-                for strat in p2_rational:
-                    st.success(f"✓ {strat}")
-        
+            st.subheader("Rationalizability (Iterated Elimination of Never-Best Responses)")
+            st.info("Strategies that survive iterative elimination of never-best responses are rationalizable.")
+
+            # Compute rationalizable strategies using your new function
+            rat_result = rationalizability_2x2(strategies, payoff_matrix)
+
+            remaining = rat_result["rationalizable_strategies"]
+
+            if not remaining:
+                st.error("All strategies eliminated — no rationalizable strategies.")
+            else:
+                # Extract final rationalizable actions
+                p1_rational = sorted({s[0]['P1_main'] for s in remaining})
+                p2_rational = sorted({s[1]['P2_main'] for s in remaining})
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown("### Player 1 Rationalizable Strategies")
+                    if not p1_rational:
+                        st.warning("No rationalizable strategies for Player 1.")
+                    else:
+                        for a in p1_rational:
+                            st.success(f"✓ {a}")
+
+                with col2:
+                    st.markdown("### Player 2 Rationalizable Strategies")
+                    if not p2_rational:
+                        st.warning("No rationalizable strategies for Player 2.")
+                    else:
+                        for a in p2_rational:
+                            st.success(f"✓ {a}")
+                            
         with tab4:
             st.subheader("Nash Equilibrium (Pure Strategies)")
             

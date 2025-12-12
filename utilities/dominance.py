@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import product
 from Models.NormalForm import compute_expected_payoff
+from utilities.best_responses import compute_best_responses
 
 def get_strict_dominance(strategies, payoff_matrix, players=["Player 1", "Player 2"]):
     dominated_strategies = {players[0]: set(), players[1]: set()}
@@ -28,7 +29,7 @@ def get_strict_dominance(strategies, payoff_matrix, players=["Player 1", "Player
                 payoffs_i = []
                 payoffs_j = []
                 for p2_strat in player2_strategies:
-                    #to compare each 2 strategies together, undex zero to get player 1's payoff
+                    #to compare each 2 strategies together, index zero to get player 1's payoff
                     payoffs_i.append(payoff_lookup[(player1_strategies[i], p2_strat)][0])
                     payoffs_j.append(payoff_lookup[(player1_strategies[j], p2_strat)][0])
                 if all(payoffs_i[k] > payoffs_j[k] for k in range(len(payoffs_i))):
@@ -276,4 +277,63 @@ def mixed_strategy_dominance_3x2(strategies, payoff_matrix, players=["Player 1",
                 break
 
     return dominated_strategies
+
+
+
+def rationalizability_2x2(strategies, payoff_matrix):
+    """
+    Iterated elimination of never-best responses for a 2x2 game.
+    Uses the existing:
+        - compute_best_responses()
+        - get_strict_dominance()
+        - get_weak_dominance()
+    """
+
+    remaining = strategies.copy()
+    remaining_payoffs = payoff_matrix.copy()
+
+    changed = True
+    iteration = 1
+
+    while changed:
+        changed = False
+        print(f"\n=== ITERATION {iteration} ===")
+
+        # 1. Compute best responses on the CURRENT strategy set
+        best_res = compute_best_responses(remaining, remaining_payoffs)
+
+        # Collect current actions
+        p1_actions = set([s[0]['P1_main'] for s in remaining])
+        p2_actions = set([s[1]['P2_main'] for s in remaining])
+
+        # 2. Find which actions are NEVER best responses
+        never_br_p1 = {a for a in p1_actions if a not in sum(best_res["Player 1"].values(), [])}
+        never_br_p2 = {a for a in p2_actions if a not in sum(best_res["Player 2"].values(), [])}
+
+        # If none removed → stable
+        if not never_br_p1 and not never_br_p2:
+            print("No more deletions → rationalizable set reached.")
+            break
+
+        # 3. Filter out deleted strategies
+        new_remaining = []
+        new_payoffs = []
+        for strat, payoff in zip(remaining, remaining_payoffs):
+            a1 = strat[0]['P1_main']
+            a2 = strat[1]['P2_main']
+            if a1 not in never_br_p1 and a2 not in never_br_p2:
+                new_remaining.append(strat)
+                new_payoffs.append(payoff)
+
+        print("Removed P1:", never_br_p1)
+        print("Removed P2:", never_br_p2)
+
+        remaining = new_remaining
+        remaining_payoffs = new_payoffs
+        iteration += 1
+
+    return {
+        "rationalizable_strategies": remaining,
+        "rationalizable_payoffs": remaining_payoffs
+    }
 
